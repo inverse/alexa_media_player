@@ -8,13 +8,14 @@ https://community.home-assistant.io/t/echo-devices-alexa-as-media-player-testers
 """
 
 import logging
-from typing import Callable
+from collections.abc import Callable
 
+import voluptuous as vol
 from alexapy import AlexaAPI, AlexapyLoginError, hide_email
 from alexapy.errors import AlexapyConnectionError
-from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-import voluptuous as vol
+from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry as er
 
 from .const import (
     ATTR_EMAIL,

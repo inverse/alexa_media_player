@@ -2,8 +2,6 @@
 
 from datetime import timedelta
 
-import pytest
-
 from custom_components.alexa_media.const import (
     ALEXA_AIR_QUALITY_DEVICE_CLASS,
     ALEXA_COMPONENTS,
@@ -49,12 +47,12 @@ class TestConstants:
     def test_issue_url_based_on_project(self):
         """Test that issue URL is based on project URL."""
         expected_issue_url = f"{PROJECT_URL}issues"
-        assert ISSUE_URL == expected_issue_url
+        assert expected_issue_url == ISSUE_URL
 
     def test_notify_url_based_on_project(self):
         """Test that notify URL is based on project URL."""
         expected_notify_url = f"{PROJECT_URL}wiki/Configuration%3A-Notification-Component#use-the-notifyalexa_media-service"
-        assert NOTIFY_URL == expected_notify_url
+        assert expected_notify_url == NOTIFY_URL
 
     def test_domain_value(self):
         """Test that domain is set correctly."""
@@ -74,7 +72,7 @@ class TestConstants:
         """Test that SCAN_INTERVAL is a timedelta and reasonable."""
         assert isinstance(SCAN_INTERVAL, timedelta)
         assert SCAN_INTERVAL.total_seconds() > 0
-        assert SCAN_INTERVAL == timedelta(seconds=60)
+        assert timedelta(seconds=60) == SCAN_INTERVAL
 
     def test_min_time_between_scans_matches_scan_interval(self):
         """Test that MIN_TIME_BETWEEN_SCANS equals SCAN_INTERVAL."""
@@ -83,7 +81,7 @@ class TestConstants:
     def test_min_time_between_forced_scans_value(self):
         """Test that MIN_TIME_BETWEEN_FORCED_SCANS is reasonable."""
         assert isinstance(MIN_TIME_BETWEEN_FORCED_SCANS, timedelta)
-        assert MIN_TIME_BETWEEN_FORCED_SCANS == timedelta(seconds=1)
+        assert timedelta(seconds=1) == MIN_TIME_BETWEEN_FORCED_SCANS
         # Forced scans should be allowed more frequently than regular scans
         assert MIN_TIME_BETWEEN_FORCED_SCANS < SCAN_INTERVAL
 

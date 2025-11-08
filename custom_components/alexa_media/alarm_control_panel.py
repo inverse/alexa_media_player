@@ -7,9 +7,8 @@ For more details about this platform, please refer to the documentation at
 https://community.home-assistant.io/t/echo-devices-alexa-as-media-player-testers-needed/58639
 """
 
-from asyncio import sleep
 import logging
-from typing import List, Optional
+from asyncio import sleep
 
 from alexapy import hide_email, hide_serial
 from homeassistant.components.alarm_control_panel import AlarmControlPanelEntity
@@ -25,8 +24,8 @@ from .const import (
     CONF_QUEUE_DELAY,
     DATA_ALEXAMEDIA,
     DEFAULT_QUEUE_DELAY,
-    DOMAIN as ALEXA_DOMAIN,
 )
+from .const import DOMAIN as ALEXA_DOMAIN
 from .helpers import _catch_login_errors, add_devices
 
 try:
@@ -73,7 +72,7 @@ async def async_setup_platform(
                 "alarm_control_panel"
             ]
         ) = {}
-    alexa_client: Optional[AlexaAlarmControlPanel] = None
+    alexa_client: AlexaAlarmControlPanel | None = None
     guard_entities = account_dict.get("devices", {}).get("guard", [])
     if guard_entities:
         alexa_client = AlexaAlarmControlPanel(
@@ -90,8 +89,8 @@ async def async_setup_platform(
             hide_email(account),
             alexa_client,
         )
-    elif alexa_client.unique_id not in (
-        account_dict["entities"]["alarm_control_panel"]
+    elif (
+        alexa_client.unique_id not in (account_dict["entities"]["alarm_control_panel"])
     ):
         devices.append(alexa_client)
         (
@@ -156,7 +155,9 @@ class AlexaAlarmControlPanel(AlarmControlPanelEntity, AlexaMedia, CoordinatorEnt
 
     @_catch_login_errors
     async def _async_alarm_set(
-        self, command: str = "", code=None  # pylint: disable=unused-argument
+        self,
+        command: str = "",
+        code=None,  # pylint: disable=unused-argument
     ) -> None:
         """Send command."""
         try:
@@ -190,13 +191,15 @@ class AlexaAlarmControlPanel(AlarmControlPanelEntity, AlexaMedia, CoordinatorEnt
         await self.coordinator.async_request_refresh()
 
     async def async_alarm_disarm(
-        self, code=None  # pylint:disable=unused-argument
+        self,
+        code=None,  # pylint:disable=unused-argument
     ) -> None:
         """Send disarm command."""
         await self._async_alarm_set(STATE_ALARM_DISARMED)
 
     async def async_alarm_arm_away(
-        self, code=None  # pylint:disable=unused-argument
+        self,
+        code=None,  # pylint:disable=unused-argument
     ) -> None:
         """Send arm away command."""
         await self._async_alarm_set(STATE_ALARM_ARMED_AWAY)
@@ -224,9 +227,8 @@ class AlexaAlarmControlPanel(AlarmControlPanelEntity, AlexaMedia, CoordinatorEnt
     @property
     def supported_features(self) -> int:
         """Return the list of supported features."""
-        # pylint: disable=import-outside-toplevel
         try:
-            from homeassistant.components.alarm_control_panel import (
+            from homeassistant.components.alarm_control_panel import (  # noqa: PLC0415
                 AlarmControlPanelEntityFeature,
             )
         except ImportError:

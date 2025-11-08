@@ -7,9 +7,9 @@ For more details about this platform, please refer to the documentation at
 https://community.home-assistant.io/t/echo-devices-alexa-as-media-player-testers-needed/58639
 """
 
+import contextlib
 import datetime
 import logging
-from typing import List
 
 from alexapy import AlexaAPI
 from homeassistant.exceptions import ConfigEntryNotReady, NoEntitySpecifiedError
@@ -22,10 +22,10 @@ from . import (
     CONF_EXCLUDE_DEVICES,
     CONF_INCLUDE_DEVICES,
     DATA_ALEXAMEDIA,
-    DOMAIN as ALEXA_DOMAIN,
     hide_email,
     hide_serial,
 )
+from . import DOMAIN as ALEXA_DOMAIN
 from .alexa_entity import parse_power_from_coordinator
 from .alexa_media import AlexaMedia
 from .const import CONF_EXTENDED_ENTITY_DISCOVERY
@@ -68,8 +68,11 @@ async def async_setup_platform(hass, config, add_devices_callback, discovery_inf
                 hide_serial(key),
             )
             raise ConfigEntryNotReady
-        if key not in (
-            hass.data[DATA_ALEXAMEDIA]["accounts"][account]["entities"]["switch"]
+        if (
+            key
+            not in (
+                hass.data[DATA_ALEXAMEDIA]["accounts"][account]["entities"]["switch"]
+            )
         ):
             hass.data[DATA_ALEXAMEDIA]["accounts"][account]["entities"]["switch"][
                 key
@@ -92,9 +95,7 @@ async def async_setup_platform(hass, config, add_devices_callback, discovery_inf
                         hide_serial(key),
                     )
                     continue
-                alexa_client = class_(
-                    account_dict["entities"]["media_player"][key]
-                )  # type: AlexaMediaSwitch
+                alexa_client = class_(account_dict["entities"]["media_player"][key])  # type: AlexaMediaSwitch
                 _LOGGER.debug(
                     "%s: Found %s %s switch with status: %s",
                     hide_email(account),
@@ -121,7 +122,7 @@ async def async_setup_platform(hass, config, add_devices_callback, discovery_inf
     switch_entities = account_dict.get("devices", {}).get("smart_switch", [])
     if switch_entities and account_dict["options"].get(CONF_EXTENDED_ENTITY_DISCOVERY):
         for switch_entity in switch_entities:
-            if not (switch_entity["is_hue_v1"] and hue_emulated_enabled):
+            if not (switch_entity["is_hue_v1"]):
                 _LOGGER.debug(
                     "Creating entity %s for a switch with name %s",
                     hide_serial(switch_entity["id"]),
@@ -306,10 +307,9 @@ class AlexaMediaSwitch(SwitchDevice, AlexaMedia):
                 return
         except AttributeError:
             pass
-        try:
+        with contextlib.suppress(NoEntitySpecifiedError):
+            # we ignore this due to a harmless startup race condition
             self.schedule_update_ha_state()
-        except NoEntitySpecifiedError:
-            pass  # we ignore this due to a harmless startup race condition
 
     @property
     def device_info(self):
@@ -464,12 +464,12 @@ class SmartSwitch(CoordinatorEntity, SwitchDevice):
         )
         control_responses = response.get("controlResponses", [])
         for response in control_responses:
-            if not response.get("code") == "SUCCESS":
+            if response.get("code") != "SUCCESS":
                 # If something failed any state is possible, fallback to a full refresh
                 return await self.coordinator.async_request_refresh()
         self._requested_power = power_on
         self._requested_state_at = datetime.datetime.now(
-            datetime.timezone.utc
+            datetime.UTC
         )  # must be set last so that previous getters work properly
         self.schedule_update_ha_state()
 

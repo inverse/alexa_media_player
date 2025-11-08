@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 
+import voluptuous as vol
 from alexapy.helpers import hide_email, hide_serial
 from homeassistant.components.notify import (
     ATTR_DATA,
@@ -22,7 +23,6 @@ from homeassistant.components.notify import (
 )
 from homeassistant.const import CONF_EMAIL
 from homeassistant.helpers.group import expand_entity_ids
-import voluptuous as vol
 
 from .const import (
     CONF_QUEUE_DELAY,
@@ -182,7 +182,7 @@ class AlexaNotificationService(BaseNotificationService):
             if last_called_entity is not None:
                 entity_name = (last_called_entity.entity_id).split(".")[1]
                 entity_name_last_called = (
-                    f"last_called{'_'+ email if entity_name[-1:].isdigit() else ''}"
+                    f"last_called{'_' + email if entity_name[-1:].isdigit() else ''}"
                 )
                 _LOGGER.debug(
                     "%s: Creating last_called target %s using %s called at %s",
@@ -209,8 +209,7 @@ class AlexaNotificationService(BaseNotificationService):
             devices = devices + list(account_dict["entities"]["media_player"].values())
         return devices
 
-    async def async_send_message(self, message="", **kwargs):
-        # pylint: disable=too-many-branches
+    async def async_send_message(self, message="", **kwargs):  # noqa: PLR0915
         """Send a message to a Alexa device."""
         _LOGGER.debug("Message: %s, kwargs: %s", message, kwargs)
         _LOGGER.debug("Target type: %s", type(kwargs.get(ATTR_TARGET)))
@@ -233,9 +232,7 @@ class AlexaNotificationService(BaseNotificationService):
                 _LOGGER.debug("Processed Target by json: %s", processed_targets)
             except json.JSONDecodeError:
                 if target.find(","):
-                    processed_targets += list(
-                        map(lambda x: x.strip(), target.split(","))
-                    )
+                    processed_targets += [x.strip() for x in target.split(",")]
                     _LOGGER.debug("Processed Target by string: %s", processed_targets)
         entities = self.convert(processed_targets, type_="entities")
         try:
@@ -285,7 +282,7 @@ class AlexaNotificationService(BaseNotificationService):
                                 message,
                                 targets=targets,
                                 title=title,
-                                method=(data["method"] if "method" in data else "all"),
+                                method=(data.get("method", "all")),
                                 queue_delay=self.hass.data[DATA_ALEXAMEDIA]["accounts"][
                                     account
                                 ]["options"].get(CONF_QUEUE_DELAY, DEFAULT_QUEUE_DELAY),

@@ -7,14 +7,16 @@ For more details about this platform, please refer to the documentation at
 https://community.home-assistant.io/t/echo-devices-alexa-as-media-player-testers-needed/58639
 """
 
+import datetime
+import logging
 from asyncio import sleep
 from collections import OrderedDict
-import datetime
 from datetime import timedelta
 from functools import reduce
-import logging
-from typing import Any, Optional
+from typing import Any
 
+import httpx
+import voluptuous as vol
 from aiohttp import ClientConnectionError, ClientSession, InvalidURL, web, web_response
 from aiohttp.web_exceptions import HTTPBadRequest
 from alexapy import (
@@ -22,31 +24,23 @@ from alexapy import (
     AlexaProxy,
     AlexapyConnectionError,
     AlexapyPyotpInvalidKey,
-    __version__ as alexapy_version,
     hide_email,
     obfuscate,
 )
+from alexapy import __version__ as alexapy_version
 from awesomeversion import AwesomeVersion
 from homeassistant import config_entries
 from homeassistant.components.http.view import HomeAssistantView
 from homeassistant.components.persistent_notification import (
     async_dismiss as async_dismiss_persistent_notification,
 )
-from homeassistant.const import (
-    CONF_EMAIL,
-    CONF_PASSWORD,
-    CONF_SCAN_INTERVAL,
-    CONF_URL,
-    __version__ as HAVERSION,
-)
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_URL
+from homeassistant.const import __version__ as HAVERSION
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult, UnknownFlow
 from homeassistant.exceptions import Unauthorized
-from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.util import slugify
-import httpx
-import voluptuous as vol
 from yarl import URL
 
 from .const import (
@@ -127,7 +121,7 @@ class AlexaMediaFlowHandler(config_entries.ConfigFlow):
             _LOGGER.info(STARTUP)
             _LOGGER.info("Loaded alexapy==%s", alexapy_version)
         self.login = None
-        self.securitycode: Optional[str] = None
+        self.securitycode: str | None = None
         self.automatic_steps: int = 0
         self.config = OrderedDict()
         self.proxy_schema = None
@@ -159,9 +153,7 @@ class AlexaMediaFlowHandler(config_entries.ConfigFlow):
         """Import a config entry from configuration.yaml."""
         return await self.async_step_user_legacy(import_config)
 
-    async def async_step_user(self, user_input=None):
-        # pylint: disable=too-many-branches
-
+    async def async_step_user(self, user_input=None):  # noqa: PLR0915
         """Provide a proxy for login."""
         self._save_user_input_to_config(user_input=user_input)
         """ Internal URL for proxy authentication """
@@ -742,7 +734,7 @@ class AlexaMediaFlowHandler(config_entries.ConfigFlow):
             step_id="user",
             data_schema=vol.Schema(new_schema),
             description_placeholders={
-                "message": f"  \n> {login.status.get('error_message','')}"
+                "message": f"  \n> {login.status.get('error_message', '')}"
             },
         )
 
@@ -964,9 +956,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             if CONF_OAUTH in self.config_entry.data:
                 user_input[CONF_OAUTH] = self.config_entry.data[CONF_OAUTH]
             """Ensure public_url ends with trailing slash"""
-            if CONF_PUBLIC_URL in self.config_entry.data:
-                if not user_input[CONF_PUBLIC_URL].endswith("/"):
-                    user_input[CONF_PUBLIC_URL] = user_input[CONF_PUBLIC_URL] + "/"
+            if CONF_PUBLIC_URL in self.config_entry.data and not user_input[
+                CONF_PUBLIC_URL
+            ].endswith("/"):
+                user_input[CONF_PUBLIC_URL] = user_input[CONF_PUBLIC_URL] + "/"
             """Remove leading/trailing spaces in device strings"""
             if CONF_INCLUDE_DEVICES in self.config_entry.data:
                 user_input[CONF_INCLUDE_DEVICES] = user_input[

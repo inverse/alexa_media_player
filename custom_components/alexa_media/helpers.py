@@ -11,15 +11,16 @@ import asyncio
 import functools
 import hashlib
 import logging
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
+import wrapt
 from alexapy import AlexapyLoginCloseRequested, AlexapyLoginError, hide_email
 from alexapy.alexalogin import AlexaLogin
 from homeassistant.const import CONF_EMAIL, CONF_URL
 from homeassistant.exceptions import ConditionErrorMessage
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.instance_id import async_get as async_get_instance_id
-import wrapt
 
 from .const import DATA_ALEXAMEDIA, EXCEPTION_TEMPLATE
 
@@ -30,19 +31,16 @@ async def add_devices(
     account: str,
     devices: list[EntityComponent],
     add_devices_callback: Callable,
-    include_filter: Optional[list[str]] = None,
-    exclude_filter: Optional[list[str]] = None,
+    include_filter: list[str] | None = None,
+    exclude_filter: list[str] | None = None,
 ) -> bool:
     """Add devices using add_devices_callback."""
     include_filter = [] or include_filter
     exclude_filter = [] or exclude_filter
     new_devices = []
     for device in devices:
-        if (
-            include_filter
-            and device.name not in include_filter
-            or exclude_filter
-            and device.name in exclude_filter
+        if (include_filter and device.name not in include_filter) or (
+            exclude_filter and device.name in exclude_filter
         ):
             _LOGGER.debug("%s: Excluding device: %s", account, device)
             continue
@@ -203,7 +201,7 @@ async def _catch_login_errors(func, instance, args, kwargs) -> Any:
                 EXCEPTION_TEMPLATE.format(type(ex).__name__, ex.args),
             )
         try:
-            hass
+            hass  # noqa: B018
         except NameError:
             hass = None
         report_relogin_required(hass, login, email)
@@ -213,23 +211,22 @@ async def _catch_login_errors(func, instance, args, kwargs) -> Any:
 
 def report_relogin_required(hass, login, email) -> bool:
     """Send message for relogin required."""
-    if hass and login and email:
-        if login.status:
-            _LOGGER.debug(
-                "Reporting need to relogin to %s with %s stats: %s",
-                login.url,
-                hide_email(email),
-                login.stats,
-            )
-            hass.bus.async_fire(
-                "alexa_media_relogin_required",
-                event_data={
-                    "email": hide_email(email),
-                    "url": login.url,
-                    "stats": login.stats,
-                },
-            )
-            return True
+    if hass and login and email and login.status:
+        _LOGGER.debug(
+            "Reporting need to relogin to %s with %s stats: %s",
+            login.url,
+            hide_email(email),
+            login.stats,
+        )
+        hass.bus.async_fire(
+            "alexa_media_relogin_required",
+            event_data={
+                "email": hide_email(email),
+                "url": login.url,
+                "stats": login.stats,
+            },
+        )
+        return True
     return False
 
 
@@ -253,7 +250,7 @@ def _existing_serials(hass, login_obj) -> list:
         )
         for serial in existing_serials[:]:
             device = device_data.get(serial, {})
-            if "appDeviceList" in device and device["appDeviceList"]:
+            if device.get("appDeviceList"):
                 apps = [
                     x["serialNumber"]
                     for x in device["appDeviceList"]
@@ -307,8 +304,8 @@ async def calculate_uuid(hass, email: str, url: str) -> dict:
 
 def alarm_just_dismissed(
     alarm: dict[str, Any],
-    previous_status: Optional[str],
-    previous_version: Optional[str],
+    previous_status: str | None,
+    previous_version: str | None,
 ) -> bool:
     """Given the previous state of an alarm, determine if it has just been dismissed."""
 

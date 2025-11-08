@@ -1,7 +1,7 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from homeassistant.exceptions import ConditionErrorMessage
 import pytest
+from homeassistant.exceptions import ConditionErrorMessage
 
 from custom_components.alexa_media.const import DATA_ALEXAMEDIA
 from custom_components.alexa_media.helpers import _existing_serials, add_devices
